@@ -3,76 +3,21 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Study Tracker</title>
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body{
-  font-family: Arial;
-  background: linear-gradient(to bottom right,#dbeafe,#eef2ff);
-  padding:10px;
-}
-
+body{font-family: Arial; background: linear-gradient(to bottom right,#dbeafe,#eef2ff); padding:10px;}
 h2{text-align:center;}
-
-.container{
-  background:white;
-  padding:10px;
-  border-radius:12px;
-  box-shadow:0 0 10px #999;
-  margin-top:10px;
-}
-
-table{
-  width:100%;
-  border-collapse:collapse;
-}
-
-th,td{
-  border:1px solid #ccc;
-  text-align:center;
-  padding:5px;
-}
-
-button{
-  width:100%;
-  padding:6px;
-  border:none;
-  border-radius:6px;
-  background:#e0e7ff;
-  transition:0.3s;
-}
-
-button:hover{
-  background:#a5b4fc;
-  cursor:pointer;
-}
-
-button.pressed{
-  background:#818cf8;
-  color:white;
-}
-
-.reset{
-  margin-top:10px;
-  background:#f87171;
-  color:white;
-  width:100%;
-  padding:10px;
-  border:none;
-  border-radius:6px;
-}
-
-.charts{
-  margin-top:15px;
-}
-
-canvas{
-  margin-top:10px;
-}
-
+.container{background:white; padding:10px; border-radius:12px; box-shadow:0 0 10px #999; margin-top:10px;}
+table{width:100%; border-collapse:collapse;}
+th,td{border:1px solid #ccc; text-align:center; padding:5px;}
+button{width:100%; padding:6px; border:none; border-radius:6px; background:#e0e7ff; transition:0.3s;}
+button:hover{background:#a5b4fc; cursor:pointer;}
+button.pressed{background:#818cf8; color:white;}
+.reset{margin-top:10px; background:#f87171; color:white; width:100%; padding:10px; border:none; border-radius:6px;}
+.charts{margin-top:15px;}
+canvas{margin-top:10px;}
 </style>
-
 </head>
 <body>
 
@@ -100,7 +45,6 @@ canvas{
 </div>
 
 <script>
-
 // ==== POINT SYSTEM ====
 const mathPoints = [20,20,20,40];
 const pcPoints   = [25,20,35,20];
@@ -108,77 +52,56 @@ const svtPoints  = [20,20,45,15];
 
 // ==== MONTH INFO ====
 let now = new Date();
-document.getElementById("month").innerText = "Progress - " + now.toLocaleString("default",{month:"long"});
+let monthName = now.toLocaleString("default",{month:"long"});
+document.getElementById("month").innerText = "Progress - " + monthName;
+let daysInMonth = new Date(now.getFullYear(), now.getMonth()+1,0).getDate();
 
-// ==== LOAD SAVED DATA OR CREATE NEW ====
+// ==== LOAD SAVED DATA ====
 function loadData(){
     let saved = localStorage.getItem("studyData");
-    if(saved){
-      return JSON.parse(saved);
-    }
-    return {
-        math: Array(16).fill(0),
-        pc:   Array(16).fill(0),
-        svt:  Array(16).fill(0)
-    };
+    if(saved) return JSON.parse(saved);
+    return {math:Array(16).fill(0), pc:Array(16).fill(0), svt:Array(16).fill(0)};
 }
 let progress = loadData();
 
-// ==== SAVE FUNCTION ====
-function saveData(){
-    localStorage.setItem("studyData",JSON.stringify(progress));
-}
+// ==== SAVE DATA ====
+function saveData(){localStorage.setItem("studyData",JSON.stringify(progress));}
 
 // ==== BUILD TABLE ====
 function build(science,points){
     let html = `<tr><td><b>${science}</b></td>`;
     for(let i=0;i<16;i++){
         let p = points[i%4];
-        let pressedClass = progress[science.toLowerCase()][i]>0 ? "pressed" : "";
-        html += `<td>
-        <button class="${pressedClass}" onclick="add('${science.toLowerCase()}',${i},${p},this)">${p}</button>
-        </td>`;
+        let pressedClass = progress[science.toLowerCase()][i]>0?"pressed":"";
+        html += `<td><button class="${pressedClass}" onclick="add('${science.toLowerCase()}',${i},${p},this)">${p}</button></td>`;
     }
     html += "</tr>";
     return html;
 }
-
 document.getElementById("table").innerHTML =
-    build("Math", mathPoints) +
-    build("PC", pcPoints) +
-    build("SVT", svtPoints);
+    build("Math", mathPoints) + build("PC", pcPoints) + build("SVT", svtPoints);
 
 // ==== BUTTON ACTION ====
 function add(science,index,points,btn){
-    progress[science][index] = points; // store real points
+    progress[science][index] = points; // store points
     saveData();
     btn.classList.add("pressed");
     updateCharts();
 }
 
-// ==== RESET SYSTEM ====
+// ==== RESET MONTH ====
 function resetAll(){
     if(confirm("Are you sure to reset all progress?")){
-        progress = {
-            math: Array(16).fill(0),
-            pc:   Array(16).fill(0),
-            svt:  Array(16).fill(0)
-        };
+        progress = {math:Array(16).fill(0), pc:Array(16).fill(0), svt:Array(16).fill(0)};
         saveData();
-        let buttons = document.querySelectorAll("button");
-        buttons.forEach(b=>b.classList.remove("pressed"));
+        document.querySelectorAll("button").forEach(b=>b.classList.remove("pressed"));
         updateCharts();
     }
 }
 
-// ==== SUM FUNCTION ====
-function sum(a){
-    return a.reduce((x,y)=>x+y,0);
-}
-
 // ==== DONUT CHARTS (1 point = 0.25%) ====
 function calculateDonut(science){
-    return progress[science].map(p=>p*0.25).reduce((a,b)=>a+b,0);
+    return progress[science].reduce((a,b)=>a+b*0.25,0);
 }
 
 let mathDonut = new Chart(document.getElementById("mathDonut"),{
@@ -197,68 +120,68 @@ data:{labels:["SVT","Remaining"],datasets:[{data:[0,100],backgroundColor:["#60a5
 options:{plugins:{title:{display:true,text:"SVT"}}}
 });
 
-// ==== LINE CHART 17 WEEKS (1 point = 1%) ====
-let weekLabels = [];
-for(let i=1;i<=17;i++) weekLabels.push("Week "+i);
+// ==== LINE CHART (horizontal = month days) ====
+let dayLabels = [];
+for(let i=1;i<=daysInMonth;i++) dayLabels.push(i);
 
 let lineChart = new Chart(document.getElementById("lineChart"),{
 type:"line",
-data:{
-    labels:weekLabels,
-    datasets:[
-        {label:"Math",data:[],borderColor:"#f87171",fill:false},
-        {label:"PC",data:[],borderColor:"#34d399",fill:false},
-        {label:"SVT",data:[],borderColor:"#60a5fa",fill:false}
-    ]
-},
+data:{labels:dayLabels,datasets:[
+    {label:"Math",data:Array(daysInMonth).fill(0),borderColor:"#f87171",fill:false},
+    {label:"PC",data:Array(daysInMonth).fill(0),borderColor:"#34d399",fill:false},
+    {label:"SVT",data:Array(daysInMonth).fill(0),borderColor:"#60a5fa",fill:false}
+]},
 options:{
     plugins:{title:{display:true,text:"Weekly Progress (%)"}},
-    scales:{
-        y:{min:0,max:100,ticks:{stepSize:5}},
-        x:{title:{display:true,text:"Week"}}
-    }
+    scales:{y:{min:0,max:100,ticks:{stepSize:5}}, x:{title:{display:true,text:"Day"}}}
 }
 });
 
-// ==== CALCULATE WEEKLY LINE CHART ====
-function calculateWeeklyLine(){
-    let mathWeekly=[],pcWeekly=[],svtWeekly=[];
-    for(let w=0;w<17;w++){
-        let start = w*1; // 1 week = 4 sessions, we have 16 → after week 4 points=0
-        mathWeekly[w] = ((progress.math[start]||0)+(progress.math[start+1]||0)+(progress.math[start+2]||0)+(progress.math[start+3]||0));
-        pcWeekly[w]   = ((progress.pc[start]||0)+(progress.pc[start+1]||0)+(progress.pc[start+2]||0)+(progress.pc[start+3]||0));
-        svtWeekly[w]  = ((progress.svt[start]||0)+(progress.svt[start+1]||0)+(progress.svt[start+2]||0)+(progress.svt[start+3]||0));
+// ==== CALCULATE LINE CHART DATA (weekly % plotted on last day of each week) ====
+function calculateLine(){
+    let mathLine = Array(daysInMonth).fill(0);
+    let pcLine   = Array(daysInMonth).fill(0);
+    let svtLine  = Array(daysInMonth).fill(0);
+
+    let sessionsPerWeek = 4;
+    let totalWeeks = 4;
+    let weekDays = Math.floor(daysInMonth/totalWeeks);
+
+    for(let w=0;w<totalWeeks;w++){
+        let startIndex = w*sessionsPerWeek;
+        let mathSum = (progress.math[startIndex]||0)+(progress.math[startIndex+1]||0)+(progress.math[startIndex+2]||0)+(progress.math[startIndex+3]||0);
+        let pcSum   = (progress.pc[startIndex]||0)+(progress.pc[startIndex+1]||0)+(progress.pc[startIndex+2]||0)+(progress.pc[startIndex+3]||0);
+        let svtSum  = (progress.svt[startIndex]||0)+(progress.svt[startIndex+1]||0)+(progress.svt[startIndex+2]||0)+(progress.svt[startIndex+3]||0);
+
+        let dayIndex = Math.min((w+1)*weekDays-1, daysInMonth-1); // last day of the week
+        mathLine[dayIndex] = mathSum; // 1 point =1%
+        pcLine[dayIndex] = pcSum;
+        svtLine[dayIndex] = svtSum;
     }
-    return [mathWeekly,pcWeekly,svtWeekly];
+
+    return [mathLine,pcLine,svtLine];
 }
 
-// ==== UPDATE CHARTS ====
+// ==== UPDATE ALL CHARTS ====
 function updateCharts(){
-    // Donut calculation (1 point = 0.25%)
-    let m = calculateDonut("math");
-    let p = calculateDonut("pc");
-    let s = calculateDonut("svt");
+    // Donuts
+    mathDonut.data.datasets[0].data=[calculateDonut("math"),100-calculateDonut("math")];
+    pcDonut.data.datasets[0].data=[calculateDonut("pc"),100-calculateDonut("pc")];
+    svtDonut.data.datasets[0].data=[calculateDonut("svt"),100-calculateDonut("svt")];
+    mathDonut.update(); pcDonut.update(); svtDonut.update();
 
-    mathDonut.data.datasets[0].data=[m,100-m];
-    pcDonut.data.datasets[0].data=[p,100-p];
-    svtDonut.data.datasets[0].data=[s,100-s];
-
-    mathDonut.update();
-    pcDonut.update();
-    svtDonut.update();
-
-    // Line chart calculation (1 point = 1%)
-    let weekly = calculateWeeklyLine();
-    lineChart.data.datasets[0].data = weekly[0];
-    lineChart.data.datasets[1].data = weekly[1];
-    lineChart.data.datasets[2].data = weekly[2];
+    // Line
+    let lineData = calculateLine();
+    lineChart.data.datasets[0].data = lineData[0];
+    lineChart.data.datasets[1].data = lineData[1];
+    lineChart.data.datasets[2].data = lineData[2];
     lineChart.update();
 }
 
-// Load saved data on start
+// ==== INITIAL UPDATE ====
 updateCharts();
 
-// ==== DAILY REMINDER 11:00 ====
+// ==== DAILY 11:00 REMINDER ====
 if(Notification.permission!="granted") Notification.requestPermission();
 setInterval(()=>{
     let d = new Date();
