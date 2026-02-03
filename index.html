@@ -15,10 +15,10 @@ button{width:100%; padding:6px; border:none; border-radius:6px; background:#e0e7
 button:hover{background:#a5b4fc; cursor:pointer;}
 button.pressed{background:#818cf8; color:white;}
 .reset{margin-top:10px; background:#f87171; color:white; width:100%; padding:10px; border:none; border-radius:6px;}
-.charts{margin-top:15px;}
 canvas{margin-top:10px;}
 </style>
 </head>
+
 <body>
 
 <h2 id="month"></h2>
@@ -34,10 +34,11 @@ canvas{margin-top:10px;}
 </tr>
 <tbody id="table"></tbody>
 </table>
+
 <button class="reset" onclick="resetAll()">Reset Month</button>
 </div>
 
-<div class="container charts">
+<div class="container">
 <canvas id="mathDonut"></canvas>
 <canvas id="pcDonut"></canvas>
 <canvas id="svtDonut"></canvas>
@@ -46,172 +47,166 @@ canvas{margin-top:10px;}
 
 <script>
 
-const mathPoints = [20,20,20,40];
-const pcPoints   = [25,20,35,20];
-const svtPoints  = [20,20,45,15];
-
 let now = new Date();
 document.getElementById("month").innerText =
 "Progress - " + now.toLocaleString("default",{month:"long"});
 
-let daysInMonth = new Date(now.getFullYear(), now.getMonth()+1,0).getDate();
+let daysInMonth =
+new Date(now.getFullYear(), now.getMonth()+1,0).getDate();
 
-function loadData(){
-    let saved = localStorage.getItem("studyData");
-    if(saved) return JSON.parse(saved);
-    return {math:Array(16).fill(0), pc:Array(16).fill(0), svt:Array(16).fill(0)};
+const mathPoints = [20,20,20,40];
+const pcPoints   = [25,20,35,20];
+const svtPoints  = [20,20,45,15];
+
+function load(){
+let s = localStorage.getItem("studyData");
+if(s) return JSON.parse(s);
+return {math:Array(16).fill(0), pc:Array(16).fill(0), svt:Array(16).fill(0)};
 }
-let progress = loadData();
 
-function saveData(){
-    localStorage.setItem("studyData",JSON.stringify(progress));
+let progress = load();
+
+function save(){
+localStorage.setItem("studyData",JSON.stringify(progress));
 }
 
-function build(science,points){
-    let html = `<tr><td><b>${science}</b></td>`;
-    for(let i=0;i<16;i++){
-        let p = points[i%4];
-        let pressedClass = progress[science.toLowerCase()][i]>0?"pressed":"";
-        html += `<td><button class="${pressedClass}"
-        onclick="add('${science.toLowerCase()}',${i},${p},this)">${p}</button></td>`;
-    }
-    html += "</tr>";
-    return html;
+function makeRow(science, points){
+let html = `<tr><td><b>${science}</b></td>`;
+for(let i=0;i<16;i++){
+let p = points[i%4];
+let pressed = progress[science.toLowerCase()][i] > 0 ? "pressed" : "";
+html += `<td><button class="${pressed}"
+onclick="add('${science.toLowerCase()}',${i},${p},this)">${p}</button></td>`;
+}
+html += "</tr>";
+return html;
 }
 
 document.getElementById("table").innerHTML =
-    build("Math", mathPoints) +
-    build("PC", pcPoints) +
-    build("SVT", svtPoints);
+makeRow("Math", mathPoints) +
+makeRow("PC", pcPoints) +
+makeRow("SVT", svtPoints);
 
 function add(science,index,points,btn){
-    progress[science][index] = points;
-    saveData();
-    btn.classList.add("pressed");
-    updateCharts();
+progress[science][index] = points;
+btn.classList.add("pressed");
+save();
+updateCharts();
 }
 
 function resetAll(){
-    if(confirm("Are you sure to reset all progress?")){
-        progress = {math:Array(16).fill(0), pc:Array(16).fill(0), svt:Array(16).fill(0)};
-        saveData();
-        document.querySelectorAll("button").forEach(b=>b.classList.remove("pressed"));
-        updateCharts();
-    }
+if(confirm("Reset everything?")){
+progress = {math:Array(16).fill(0), pc:Array(16).fill(0), svt:Array(16).fill(0)};
+save();
+document.querySelectorAll("button").forEach(b=>b.classList.remove("pressed"));
+updateCharts();
+}
 }
 
-function calculateDonut(science){
-    return progress[science].reduce((a,b)=>a+b*0.25,0);
+function donutPercent(science){
+return progress[science].reduce((a,b)=>a+b*0.25,0);
 }
 
 let mathDonut = new Chart(document.getElementById("mathDonut"),{
 type:"doughnut",
-data:{labels:["Math","Remaining"],datasets:[{data:[0,100],backgroundColor:["#f87171","#e5e7eb"]}]},
-options:{plugins:{title:{display:true,text:"Math"}}}
+data:{labels:["Math","Remaining"],datasets:[{data:[0,100],backgroundColor:["red","#ddd"]}]}
 });
+
 let pcDonut = new Chart(document.getElementById("pcDonut"),{
 type:"doughnut",
-data:{labels:["PC","Remaining"],datasets:[{data:[0,100],backgroundColor:["#34d399","#e5e7eb"]}]},
-options:{plugins:{title:{display:true,text:"PC"}}}
+data:{labels:["PC","Remaining"],datasets:[{data:[0,100],backgroundColor:["green","#ddd"]}]}
 });
+
 let svtDonut = new Chart(document.getElementById("svtDonut"),{
 type:"doughnut",
-data:{labels:["SVT","Remaining"],datasets:[{data:[0,100],backgroundColor:["#60a5fa","#e5e7eb"]}]},
-options:{plugins:{title:{display:true,text:"SVT"}}}
+data:{labels:["SVT","Remaining"],datasets:[{data:[0,100],backgroundColor:["blue","#ddd"]}]}
 });
 
-// ==== LINE CHART WITH ORIGIN (0,0) ====
 
-let dayLabels = [0];
-for(let i=1;i<=daysInMonth;i++) dayLabels.push(i);
+// ===== LINE CHART WITH TRUE ZERO ORIGIN =====
+
+let labels = [0];
+for(let i=1;i<=daysInMonth;i++) labels.push(i);
 
 let lineChart = new Chart(document.getElementById("lineChart"),{
 type:"line",
-data:{labels:dayLabels,datasets:[
-    {label:"Math",data:Array(daysInMonth+1).fill(0),borderColor:"#f87171",fill:false},
-    {label:"PC",data:Array(daysInMonth+1).fill(0),borderColor:"#34d399",fill:false},
-    {label:"SVT",data:Array(daysInMonth+1).fill(0),borderColor:"#60a5fa",fill:false}
-]},
+data:{
+labels: labels,
+datasets:[
+{label:"Math",data:Array(daysInMonth+1).fill(0),borderColor:"red",fill:false},
+{label:"PC",data:Array(daysInMonth+1).fill(0),borderColor:"green",fill:false},
+{label:"SVT",data:Array(daysInMonth+1).fill(0),borderColor:"blue",fill:false}
+]
+},
 options:{
-    plugins:{title:{display:true,text:"Weekly Progress (%)"}},
-    scales:{y:{min:0,max:100,ticks:{stepSize:5}}, x:{title:{display:true,text:"Day"}}}
+scales:{
+y:{min:0,max:100,ticks:{stepSize:5}},
+x:{title:{display:true,text:"Days of Month"}}
+}
 }
 });
 
-// ==== CALCULATE LINE DATA STARTING FROM ZERO ====
-
 function calculateLine(){
 
-    let mathLine = Array(daysInMonth+1).fill(null);
-    let pcLine   = Array(daysInMonth+1).fill(null);
-    let svtLine  = Array(daysInMonth+1).fill(null);
+let math = Array(daysInMonth+1).fill(null);
+let pc   = Array(daysInMonth+1).fill(null);
+let svt  = Array(daysInMonth+1).fill(null);
 
-    mathLine[0] = 0;
-    pcLine[0] = 0;
-    svtLine[0] = 0;
+math[0] = 0;
+pc[0] = 0;
+svt[0] = 0;
 
-    let sessionsPerWeek = 4;
-    let totalWeeks = 4;
-    let weekDays = Math.floor(daysInMonth/totalWeeks);
+let weekSize = Math.floor(daysInMonth/4);
 
-    for(let w=0;w<totalWeeks;w++){
+for(let w=0;w<4;w++){
 
-        let start = w*sessionsPerWeek;
+let i = w*4;
 
-        let mathSum =
-        (progress.math[start]||0)+
-        (progress.math[start+1]||0)+
-        (progress.math[start+2]||0)+
-        (progress.math[start+3]||0);
+let m = (progress.math[i]||0)+(progress.math[i+1]||0)+
+(progress.math[i+2]||0)+(progress.math[i+3]||0);
 
-        let pcSum =
-        (progress.pc[start]||0)+
-        (progress.pc[start+1]||0)+
-        (progress.pc[start+2]||0)+
-        (progress.pc[start+3]||0);
+let p = (progress.pc[i]||0)+(progress.pc[i+1]||0)+
+(progress.pc[i+2]||0)+(progress.pc[i+3]||0);
 
-        let svtSum =
-        (progress.svt[start]||0)+
-        (progress.svt[start+1]||0)+
-        (progress.svt[start+2]||0)+
-        (progress.svt[start+3]||0);
+let s = (progress.svt[i]||0)+(progress.svt[i+1]||0)+
+(progress.svt[i+2]||0)+(progress.svt[i+3]||0);
 
-        let dayIndex = Math.min((w+1)*weekDays, daysInMonth);
+let day = Math.min((w+1)*weekSize, daysInMonth);
 
-        mathLine[dayIndex] = mathSum;
-        pcLine[dayIndex] = pcSum;
-        svtLine[dayIndex] = svtSum;
-    }
+math[day] = m;
+pc[day] = p;
+svt[day] = s;
+}
 
-    function connect(arr){
-        let last = 0;
-        for(let i=0;i<arr.length;i++){
-            if(arr[i]==null) arr[i]=last;
-            else last = arr[i];
-        }
-        return arr;
-    }
+function connect(arr){
+let last = 0;
+for(let i=0;i<arr.length;i++){
+if(arr[i]==null) arr[i] = last;
+else last = arr[i];
+}
+return arr;
+}
 
-    return [connect(mathLine),connect(pcLine),connect(svtLine)];
+return [connect(math),connect(pc),connect(svt)];
 }
 
 function updateCharts(){
 
-    mathDonut.data.datasets[0].data=[calculateDonut("math"),100-calculateDonut("math")];
-    pcDonut.data.datasets[0].data=[calculateDonut("pc"),100-calculateDonut("pc")];
-    svtDonut.data.datasets[0].data=[calculateDonut("svt"),100-calculateDonut("svt")];
+mathDonut.data.datasets[0].data = [donutPercent("math"),100-donutPercent("math")];
+pcDonut.data.datasets[0].data   = [donutPercent("pc"),100-donutPercent("pc")];
+svtDonut.data.datasets[0].data  = [donutPercent("svt"),100-donutPercent("svt")];
 
-    mathDonut.update();
-    pcDonut.update();
-    svtDonut.update();
+mathDonut.update();
+pcDonut.update();
+svtDonut.update();
 
-    let lineData = calculateLine();
+let lines = calculateLine();
 
-    lineChart.data.datasets[0].data = lineData[0];
-    lineChart.data.datasets[1].data = lineData[1];
-    lineChart.data.datasets[2].data = lineData[2];
+lineChart.data.datasets[0].data = lines[0];
+lineChart.data.datasets[1].data = lines[1];
+lineChart.data.datasets[2].data = lines[2];
 
-    lineChart.update();
+lineChart.update();
 }
 
 updateCharts();
