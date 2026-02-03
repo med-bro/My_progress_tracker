@@ -120,15 +120,17 @@ data:{labels:["SVT","Remaining"],datasets:[{data:[0,100],backgroundColor:["#60a5
 options:{plugins:{title:{display:true,text:"SVT"}}}
 });
 
-let dayLabels = [];
+// ==== LINE CHART WITH ORIGIN (0,0) ====
+
+let dayLabels = [0];
 for(let i=1;i<=daysInMonth;i++) dayLabels.push(i);
 
 let lineChart = new Chart(document.getElementById("lineChart"),{
 type:"line",
 data:{labels:dayLabels,datasets:[
-    {label:"Math",data:Array(daysInMonth).fill(0),borderColor:"#f87171",fill:false},
-    {label:"PC",data:Array(daysInMonth).fill(0),borderColor:"#34d399",fill:false},
-    {label:"SVT",data:Array(daysInMonth).fill(0),borderColor:"#60a5fa",fill:false}
+    {label:"Math",data:Array(daysInMonth+1).fill(0),borderColor:"#f87171",fill:false},
+    {label:"PC",data:Array(daysInMonth+1).fill(0),borderColor:"#34d399",fill:false},
+    {label:"SVT",data:Array(daysInMonth+1).fill(0),borderColor:"#60a5fa",fill:false}
 ]},
 options:{
     plugins:{title:{display:true,text:"Weekly Progress (%)"}},
@@ -136,14 +138,14 @@ options:{
 }
 });
 
-// ==== NEW PART – EXACT BEHAVIOR YOU ASKED FOR ====
+// ==== CALCULATE LINE DATA STARTING FROM ZERO ====
+
 function calculateLine(){
 
-    let mathLine = Array(daysInMonth).fill(null);
-    let pcLine   = Array(daysInMonth).fill(null);
-    let svtLine  = Array(daysInMonth).fill(null);
+    let mathLine = Array(daysInMonth+1).fill(null);
+    let pcLine   = Array(daysInMonth+1).fill(null);
+    let svtLine  = Array(daysInMonth+1).fill(null);
 
-    // Start all lines at zero
     mathLine[0] = 0;
     pcLine[0] = 0;
     svtLine[0] = 0;
@@ -174,14 +176,13 @@ function calculateLine(){
         (progress.svt[start+2]||0)+
         (progress.svt[start+3]||0);
 
-        let dayIndex = Math.min((w+1)*weekDays-1, daysInMonth-1);
+        let dayIndex = Math.min((w+1)*weekDays, daysInMonth);
 
         mathLine[dayIndex] = mathSum;
         pcLine[dayIndex] = pcSum;
         svtLine[dayIndex] = svtSum;
     }
 
-    // Fill empty days so line stays connected
     function connect(arr){
         let last = 0;
         for(let i=0;i<arr.length;i++){
@@ -194,7 +195,6 @@ function calculateLine(){
     return [connect(mathLine),connect(pcLine),connect(svtLine)];
 }
 
-// ==== UPDATE CHARTS ====
 function updateCharts(){
 
     mathDonut.data.datasets[0].data=[calculateDonut("math"),100-calculateDonut("math")];
