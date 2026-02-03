@@ -2,28 +2,69 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>My Study Tracker</title>
+<title>Study Tracker</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body { font-family: Arial; background:#eef; padding:10px; }
+body{
+  font-family: Arial;
+  background: linear-gradient(to bottom right,#dbeafe,#eef2ff);
+  padding:10px;
+}
 
-table { width:100%; border-collapse:collapse; margin-top:10px; }
-th, td { border:1px solid #999; padding:5px; text-align:center; }
+h2{text-align:center;}
 
-button { width:100%; padding:6px; }
+.container{
+  background:white;
+  padding:10px;
+  border-radius:12px;
+  box-shadow:0 0 10px #999;
+  margin-top:10px;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+th,td{
+  border:1px solid #ccc;
+  text-align:center;
+  padding:5px;
+}
+
+button{
+  width:100%;
+  padding:6px;
+  border:none;
+  border-radius:6px;
+  background:#e0e7ff;
+}
+
+button:hover{
+  background:#a5b4fc;
+  cursor:pointer;
+}
+
+.reset{
+  margin-top:10px;
+  background:#f87171;
+  color:white;
+}
 
 .charts{
-  margin-top:20px;
+  margin-top:15px;
 }
-</style>
 
+</style>
 </head>
 
 <body>
 
-<h2 id="monthTitle"></h2>
+<h2 id="month"></h2>
+
+<div class="container">
 
 <table>
 
@@ -36,51 +77,87 @@ button { width:100%; padding:6px; }
 <th colspan="4">Week 4</th>
 </tr>
 
-<tbody id="mainTable"></tbody>
+<tbody id="table"></tbody>
 
 </table>
 
-<div class="charts">
-<canvas id="donutMath"></canvas>
-<canvas id="donutPC"></canvas>
-<canvas id="donutSVT"></canvas>
+<button class="reset" onclick="resetAll()">Reset Month</button>
 
-<canvas id="line"></canvas>
 </div>
+
+
+<div class="container charts">
+
+<canvas id="mathDonut"></canvas>
+<canvas id="pcDonut"></canvas>
+<canvas id="svtDonut"></canvas>
+
+<canvas id="lineChart"></canvas>
+
+</div>
+
 
 <script>
 
-// ====== POINT SYSTEM ======
+// ==== POINT SYSTEM ====
 
-const math = [20,20,20,40];
-const pc   = [25,20,35,20];
-const svt  = [20,20,45,15];
+const mathPoints = [20,20,20,40];
+const pcPoints   = [25,20,35,20];
+const svtPoints  = [20,20,45,15];
 
-// empty data
-let progress = {
-math: Array(16).fill(0),
-pc:   Array(16).fill(0),
-svt:  Array(16).fill(0)
+
+// ==== MONTH INFO ====
+
+let now = new Date();
+
+document.getElementById("month").innerText =
+"Progress - " + now.toLocaleString("default",{month:"long"});
+
+let daysInMonth =
+new Date(now.getFullYear(), now.getMonth()+1,0).getDate();
+
+
+// ==== LOAD SAVED DATA OR CREATE NEW ====
+
+function loadData(){
+
+let saved = localStorage.getItem("studyData");
+
+if(saved){
+  return JSON.parse(saved);
+}
+
+return {
+math: Array(daysInMonth).fill(0),
+pc:   Array(daysInMonth).fill(0),
+svt:  Array(daysInMonth).fill(0)
 };
 
-// month title
-document.getElementById("monthTitle").innerText =
-"Progress - " + new Date().toLocaleString("default",{month:"long"});
+}
+
+let progress = loadData();
 
 
-// build table
+// ==== SAVE FUNCTION ====
 
-function row(name,arr){
+function saveData(){
+localStorage.setItem("studyData",JSON.stringify(progress));
+}
 
-let html = `<tr><td><b>${name}</b></td>`;
+
+// ==== BUILD TABLE ====
+
+function build(science,points){
+
+let html = `<tr><td><b>${science}</b></td>`;
 
 for(let i=0;i<16;i++){
 
-let pts = arr[i%4];
+let p = points[i%4];
 
 html += `<td>
-<button onclick="add('${name}',${i},${pts})">
-${pts}
+<button onclick="add('${science.toLowerCase()}',${i},${p})">
+${p}
 </button>
 </td>`;
 }
@@ -90,146 +167,142 @@ html += "</tr>";
 return html;
 }
 
-document.getElementById("mainTable").innerHTML =
-row("math",math) +
-row("pc",pc) +
-row("svt",svt);
+document.getElementById("table").innerHTML =
+build("math",mathPoints) +
+build("pc",pcPoints) +
+build("svt",svtPoints);
 
 
-// when press button
+// ==== BUTTON ACTION ====
 
 function add(science,index,points){
 
 let percent = points / 4;
 
-progress[science][index] = percent;
+let dayIndex = index % daysInMonth;
 
-update();
+progress[science][dayIndex] = percent;
+
+saveData();
+
+updateCharts();
 }
 
 
-// helper sum
+// ==== RESET SYSTEM ====
 
-function total(a){
+function resetAll(){
+
+if(confirm("Are you sure to reset all progress?")){
+
+progress = {
+math: Array(daysInMonth).fill(0),
+pc:   Array(daysInMonth).fill(0),
+svt:  Array(daysInMonth).fill(0)
+};
+
+saveData();
+updateCharts();
+
+}
+
+}
+
+
+// ==== SUM FUNCTION ====
+
+function sum(a){
 return a.reduce((x,y)=>x+y,0);
 }
 
 
-// ===== DONUT CHARTS =====
+// ==== DONUT CHARTS ====
 
-let donutMath = new Chart(document.getElementById("donutMath"),{
+let mathDonut = new Chart(document.getElementById("mathDonut"),{
 type:"doughnut",
-data:{
-labels:["Math","Remaining"],
-datasets:[{
-data:[0,100],
-backgroundColor:["#ff4d4d","#ddd"]
-}]
-},
+data:{labels:["Math","Remaining"],
+datasets:[{data:[0,100],backgroundColor:["#f87171","#e5e7eb"]}]},
 options:{plugins:{title:{display:true,text:"Math"}}}
 });
 
-
-let donutPC = new Chart(document.getElementById("donutPC"),{
+let pcDonut = new Chart(document.getElementById("pcDonut"),{
 type:"doughnut",
-data:{
-labels:["PC","Remaining"],
-datasets:[{
-data:[0,100],
-backgroundColor:["#4caf50","#ddd"]
-}]
-},
+data:{labels:["PC","Remaining"],
+datasets:[{data:[0,100],backgroundColor:["#34d399","#e5e7eb"]}]},
 options:{plugins:{title:{display:true,text:"PC"}}}
 });
 
-
-let donutSVT = new Chart(document.getElementById("donutSVT"),{
+let svtDonut = new Chart(document.getElementById("svtDonut"),{
 type:"doughnut",
-data:{
-labels:["SVT","Remaining"],
-datasets:[{
-data:[0,100],
-backgroundColor:["#2196f3","#ddd"]
-}]
-},
+data:{labels:["SVT","Remaining"],
+datasets:[{data:[0,100],backgroundColor:["#60a5fa","#e5e7eb"]}]},
 options:{plugins:{title:{display:true,text:"SVT"}}}
 });
 
 
-// ===== LINE CHART =====
+// ==== LINE CHART ====
 
-let line = new Chart(document.getElementById("line"),{
+let labels = [];
+
+for(let i=1;i<=daysInMonth;i++) labels.push(i);
+
+let lineChart = new Chart(document.getElementById("lineChart"),{
 
 type:"line",
 
 data:{
 
-labels:["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16"],
+labels:labels,
 
 datasets:[
 
-{
-label:"Math",
-data:progress.math,
-borderColor:"#ff4d4d",
-fill:false
-},
+{label:"Math",data:progress.math,borderColor:"#f87171",fill:false},
 
-{
-label:"PC",
-data:progress.pc,
-borderColor:"#4caf50",
-fill:false
-},
+{label:"PC",data:progress.pc,borderColor:"#34d399",fill:false},
 
-{
-label:"SVT",
-data:progress.svt,
-borderColor:"#2196f3",
-fill:false
-}
+{label:"SVT",data:progress.svt,borderColor:"#60a5fa",fill:false}
 
 ]
 
 },
 
 options:{
-plugins:{title:{display:true,text:"Progress Line (%)"}},
-scales:{y:{min:0,max:25}}
+plugins:{title:{display:true,text:"Monthly Progress %"}},
+scales:{y:{min:0,max:100}}
 }
 
 });
 
 
-// ===== UPDATE FUNCTION =====
+// ==== UPDATE CHARTS ====
 
-function update(){
+function updateCharts(){
 
-let m = total(progress.math);
-let p = total(progress.pc);
-let s = total(progress.svt);
+let m = sum(progress.math);
+let p = sum(progress.pc);
+let s = sum(progress.svt);
 
-// update donuts
+mathDonut.data.datasets[0].data=[m,100-m];
+pcDonut.data.datasets[0].data=[p,100-p];
+svtDonut.data.datasets[0].data=[s,100-s];
 
-donutMath.data.datasets[0].data=[m,100-m];
-donutPC.data.datasets[0].data=[p,100-p];
-donutSVT.data.datasets[0].data=[s,100-s];
+mathDonut.update();
+pcDonut.update();
+svtDonut.update();
 
-donutMath.update();
-donutPC.update();
-donutSVT.update();
+lineChart.data.datasets[0].data = progress.math;
+lineChart.data.datasets[1].data = progress.pc;
+lineChart.data.datasets[2].data = progress.svt;
 
-// update line
-
-line.data.datasets[0].data = progress.math;
-line.data.datasets[1].data = progress.pc;
-line.data.datasets[2].data = progress.svt;
-
-line.update();
+lineChart.update();
 }
 
 
-// ===== DAILY REMINDER =====
+// load saved data on start
+updateCharts();
+
+
+// ==== DAILY REMINDER ====
 
 if(Notification.permission!="granted")
 Notification.requestPermission();
@@ -239,7 +312,7 @@ setInterval(()=>{
 let d = new Date();
 
 if(d.getHours()==11 && d.getMinutes()==0){
-new Notification("Study Tracker: Enter today's points!");
+new Notification("Reminder: Enter today's study points!");
 }
 
 },60000);
