@@ -6,15 +6,59 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body{font-family: Arial; background: linear-gradient(to bottom right,#dbeafe,#eef2ff); padding:10px;}
+body{
+font-family: Arial;
+background: linear-gradient(to bottom right,#dbeafe,#eef2ff);
+padding:10px;
+}
+
 h2{text-align:center;}
-.container{background:white; padding:10px; border-radius:12px; box-shadow:0 0 10px #999; margin-top:10px;}
+
+.container{
+background:white;
+padding:10px;
+border-radius:12px;
+box-shadow:0 0 10px #999;
+margin-top:10px;
+}
+
 table{width:100%; border-collapse:collapse;}
-th,td{border:1px solid #ccc; text-align:center; padding:5px;}
-button{width:100%; padding:6px; border:none; border-radius:6px; background:#e0e7ff; transition:0.3s;}
-button:hover{background:#a5b4fc; cursor:pointer;}
-button.pressed{background:#818cf8; color:white;}
-.reset{margin-top:10px; background:#f87171; color:white; width:100%; padding:10px; border:none; border-radius:6px;}
+
+th,td{
+border:1px solid #ccc;
+text-align:center;
+padding:5px;
+}
+
+button{
+width:100%;
+padding:6px;
+border:none;
+border-radius:6px;
+background:#e0e7ff;
+transition:0.3s;
+}
+
+button:hover{
+background:#a5b4fc;
+cursor:pointer;
+}
+
+button.pressed{
+background:#818cf8;
+color:white;
+}
+
+.reset{
+margin-top:10px;
+background:#f87171;
+color:white;
+width:100%;
+padding:10px;
+border:none;
+border-radius:6px;
+}
+
 canvas{margin-top:10px;}
 </style>
 </head>
@@ -32,6 +76,7 @@ canvas{margin-top:10px;}
 <th colspan="4">Week 3</th>
 <th colspan="4">Week 4</th>
 </tr>
+
 <tbody id="table"></tbody>
 </table>
 
@@ -47,7 +92,10 @@ canvas{margin-top:10px;}
 
 <script>
 
+// ===== BASIC SETUP =====
+
 let now = new Date();
+
 document.getElementById("month").innerText =
 "Progress - " + now.toLocaleString("default",{month:"long"});
 
@@ -70,15 +118,25 @@ function save(){
 localStorage.setItem("studyData",JSON.stringify(progress));
 }
 
+// ===== TABLE CREATION =====
+
 function makeRow(science, points){
+
 let html = `<tr><td><b>${science}</b></td>`;
+
 for(let i=0;i<16;i++){
+
 let p = points[i%4];
-let pressed = progress[science.toLowerCase()][i] > 0 ? "pressed" : "";
+
+let pressed =
+progress[science.toLowerCase()][i] > 0 ? "pressed" : "";
+
 html += `<td><button class="${pressed}"
 onclick="add('${science.toLowerCase()}',${i},${p},this)">${p}</button></td>`;
 }
+
 html += "</tr>";
+
 return html;
 }
 
@@ -87,12 +145,16 @@ makeRow("Math", mathPoints) +
 makeRow("PC", pcPoints) +
 makeRow("SVT", svtPoints);
 
+// ===== BUTTON LOGIC =====
+
 function add(science,index,points,btn){
 progress[science][index] = points;
 btn.classList.add("pressed");
 save();
 updateCharts();
 }
+
+// ===== RESET SYSTEM =====
 
 function resetAll(){
 if(confirm("Reset everything?")){
@@ -103,9 +165,13 @@ updateCharts();
 }
 }
 
+// ===== DONUT CHART CALCULATION =====
+
 function donutPercent(science){
 return progress[science].reduce((a,b)=>a+b*0.25,0);
 }
+
+// ===== DONUT CHARTS =====
 
 let mathDonut = new Chart(document.getElementById("mathDonut"),{
 type:"doughnut",
@@ -122,11 +188,13 @@ type:"doughnut",
 data:{labels:["SVT","Remaining"],datasets:[{data:[0,100],backgroundColor:["blue","#ddd"]}]}
 });
 
-
-// ===== LINE CHART WITH TRUE ZERO ORIGIN =====
+// ===== TRUE ZERO ORIGIN LINE CHART =====
 
 let labels = [0];
-for(let i=1;i<=daysInMonth;i++) labels.push(i);
+
+for(let i=1;i<=daysInMonth;i++){
+labels.push(i);
+}
 
 let lineChart = new Chart(document.getElementById("lineChart"),{
 type:"line",
@@ -140,11 +208,20 @@ datasets:[
 },
 options:{
 scales:{
-y:{min:0,max:100,ticks:{stepSize:5}},
-x:{title:{display:true,text:"Days of Month"}}
+y:{
+min:0,
+max:100,
+ticks:{stepSize:5}
+},
+x:{
+min:0,
+title:{display:true,text:"Days of Month"}
+}
 }
 }
 });
+
+// ===== LINE CHART CALCULATION =====
 
 function calculateLine(){
 
@@ -152,6 +229,7 @@ let math = Array(daysInMonth+1).fill(null);
 let pc   = Array(daysInMonth+1).fill(null);
 let svt  = Array(daysInMonth+1).fill(null);
 
+// START FROM TRUE ORIGIN
 math[0] = 0;
 pc[0] = 0;
 svt[0] = 0;
@@ -162,14 +240,23 @@ for(let w=0;w<4;w++){
 
 let i = w*4;
 
-let m = (progress.math[i]||0)+(progress.math[i+1]||0)+
-(progress.math[i+2]||0)+(progress.math[i+3]||0);
+let m =
+(progress.math[i]||0)+
+(progress.math[i+1]||0)+
+(progress.math[i+2]||0)+
+(progress.math[i+3]||0);
 
-let p = (progress.pc[i]||0)+(progress.pc[i+1]||0)+
-(progress.pc[i+2]||0)+(progress.pc[i+3]||0);
+let p =
+(progress.pc[i]||0)+
+(progress.pc[i+1]||0)+
+(progress.pc[i+2]||0)+
+(progress.pc[i+3]||0);
 
-let s = (progress.svt[i]||0)+(progress.svt[i+1]||0)+
-(progress.svt[i+2]||0)+(progress.svt[i+3]||0);
+let s =
+(progress.svt[i]||0)+
+(progress.svt[i+1]||0)+
+(progress.svt[i+2]||0)+
+(progress.svt[i+3]||0);
 
 let day = Math.min((w+1)*weekSize, daysInMonth);
 
@@ -178,10 +265,12 @@ pc[day] = p;
 svt[day] = s;
 }
 
+// CONNECT THE DOTS
+
 function connect(arr){
 let last = 0;
 for(let i=0;i<arr.length;i++){
-if(arr[i]==null) arr[i] = last;
+if(arr[i]==null) arr[i]=last;
 else last = arr[i];
 }
 return arr;
@@ -190,11 +279,18 @@ return arr;
 return [connect(math),connect(pc),connect(svt)];
 }
 
+// ===== UPDATE ALL CHARTS =====
+
 function updateCharts(){
 
-mathDonut.data.datasets[0].data = [donutPercent("math"),100-donutPercent("math")];
-pcDonut.data.datasets[0].data   = [donutPercent("pc"),100-donutPercent("pc")];
-svtDonut.data.datasets[0].data  = [donutPercent("svt"),100-donutPercent("svt")];
+mathDonut.data.datasets[0].data =
+[donutPercent("math"),100-donutPercent("math")];
+
+pcDonut.data.datasets[0].data =
+[donutPercent("pc"),100-donutPercent("pc")];
+
+svtDonut.data.datasets[0].data =
+[donutPercent("svt"),100-donutPercent("svt")];
 
 mathDonut.update();
 pcDonut.update();
@@ -209,8 +305,11 @@ lineChart.data.datasets[2].data = lines[2];
 lineChart.update();
 }
 
+// ===== INITIAL LOAD =====
+
 updateCharts();
 
 </script>
+
 </body>
 </html>
