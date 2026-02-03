@@ -40,6 +40,7 @@ button{
   border:none;
   border-radius:6px;
   background:#e0e7ff;
+  transition:0.3s;
 }
 
 button:hover{
@@ -47,277 +48,216 @@ button:hover{
   cursor:pointer;
 }
 
+button.pressed{
+  background:#818cf8;
+  color:white;
+}
+
 .reset{
   margin-top:10px;
   background:#f87171;
   color:white;
+  width:100%;
+  padding:10px;
+  border:none;
+  border-radius:6px;
 }
 
 .charts{
   margin-top:15px;
 }
 
-</style>
-</head>
+canvas{
+  margin-top:10px;
+}
 
+</style>
+
+</head>
 <body>
 
 <h2 id="month"></h2>
 
 <div class="container">
-
 <table>
-
 <tr>
 <th>Science</th>
-
 <th colspan="4">Week 1</th>
 <th colspan="4">Week 2</th>
 <th colspan="4">Week 3</th>
 <th colspan="4">Week 4</th>
 </tr>
-
 <tbody id="table"></tbody>
-
 </table>
-
 <button class="reset" onclick="resetAll()">Reset Month</button>
-
 </div>
 
-
 <div class="container charts">
-
 <canvas id="mathDonut"></canvas>
 <canvas id="pcDonut"></canvas>
 <canvas id="svtDonut"></canvas>
-
 <canvas id="lineChart"></canvas>
-
 </div>
-
 
 <script>
 
 // ==== POINT SYSTEM ====
-
 const mathPoints = [20,20,20,40];
 const pcPoints   = [25,20,35,20];
 const svtPoints  = [20,20,45,15];
 
-
 // ==== MONTH INFO ====
-
 let now = new Date();
-
-document.getElementById("month").innerText =
-"Progress - " + now.toLocaleString("default",{month:"long"});
-
-let daysInMonth =
-new Date(now.getFullYear(), now.getMonth()+1,0).getDate();
-
+document.getElementById("month").innerText = "Progress - " + now.toLocaleString("default",{month:"long"});
+let daysInMonth = new Date(now.getFullYear(), now.getMonth()+1,0).getDate();
 
 // ==== LOAD SAVED DATA OR CREATE NEW ====
-
 function loadData(){
-
-let saved = localStorage.getItem("studyData");
-
-if(saved){
-  return JSON.parse(saved);
+    let saved = localStorage.getItem("studyData");
+    if(saved){
+      return JSON.parse(saved);
+    }
+    return {
+        math: Array(daysInMonth).fill(0),
+        pc:   Array(daysInMonth).fill(0),
+        svt:  Array(daysInMonth).fill(0)
+    };
 }
-
-return {
-math: Array(daysInMonth).fill(0),
-pc:   Array(daysInMonth).fill(0),
-svt:  Array(daysInMonth).fill(0)
-};
-
-}
-
 let progress = loadData();
 
-
 // ==== SAVE FUNCTION ====
-
 function saveData(){
-localStorage.setItem("studyData",JSON.stringify(progress));
+    localStorage.setItem("studyData",JSON.stringify(progress));
 }
-
 
 // ==== BUILD TABLE ====
-
 function build(science,points){
-
-let html = `<tr><td><b>${science}</b></td>`;
-
-for(let i=0;i<16;i++){
-
-let p = points[i%4];
-
-html += `<td>
-<button onclick="add('${science.toLowerCase()}',${i},${p})">
-${p}
-</button>
-</td>`;
-}
-
-html += "</tr>";
-
-return html;
+    let html = `<tr><td><b>${science}</b></td>`;
+    for(let i=0;i<16;i++){
+        let p = points[i%4];
+        // Check if already pressed
+        let dayIndex = Math.floor(i * (daysInMonth/16));
+        let pressedClass = progress[science.toLowerCase()][dayIndex]>0 ? "pressed" : "";
+        html += `<td>
+        <button class="${pressedClass}" onclick="add('${science.toLowerCase()}',${i},${p},this)">${p}</button>
+        </td>`;
+    }
+    html += "</tr>";
+    return html;
 }
 
 document.getElementById("table").innerHTML =
-build("math",mathPoints) +
-build("pc",pcPoints) +
-build("svt",svtPoints);
-
+    build("Math", mathPoints) +
+    build("PC", pcPoints) +
+    build("SVT", svtPoints);
 
 // ==== BUTTON ACTION ====
-
-function add(science,index,points){
-
-let percent = points / 4;
-
-let dayIndex = index % daysInMonth;
-
-progress[science][dayIndex] = percent;
-
-saveData();
-
-updateCharts();
+function add(science,index,points,btn){
+    let percent = points / 4;
+    let dayIndex = Math.floor(index * (daysInMonth/16));
+    progress[science][dayIndex] = percent;
+    saveData();
+    btn.classList.add("pressed");
+    updateCharts();
 }
-
 
 // ==== RESET SYSTEM ====
-
 function resetAll(){
-
-if(confirm("Are you sure to reset all progress?")){
-
-progress = {
-math: Array(daysInMonth).fill(0),
-pc:   Array(daysInMonth).fill(0),
-svt:  Array(daysInMonth).fill(0)
-};
-
-saveData();
-updateCharts();
-
+    if(confirm("Are you sure to reset all progress?")){
+        progress = {
+            math: Array(daysInMonth).fill(0),
+            pc:   Array(daysInMonth).fill(0),
+            svt:  Array(daysInMonth).fill(0)
+        };
+        saveData();
+        // Reset button styles
+        let buttons = document.querySelectorAll("button");
+        buttons.forEach(b=>b.classList.remove("pressed"));
+        updateCharts();
+    }
 }
-
-}
-
 
 // ==== SUM FUNCTION ====
-
 function sum(a){
-return a.reduce((x,y)=>x+y,0);
+    return a.reduce((x,y)=>x+y,0);
 }
 
-
 // ==== DONUT CHARTS ====
-
 let mathDonut = new Chart(document.getElementById("mathDonut"),{
 type:"doughnut",
-data:{labels:["Math","Remaining"],
-datasets:[{data:[0,100],backgroundColor:["#f87171","#e5e7eb"]}]},
+data:{labels:["Math","Remaining"],datasets:[{data:[0,100],backgroundColor:["#f87171","#e5e7eb"]}]},
 options:{plugins:{title:{display:true,text:"Math"}}}
 });
-
 let pcDonut = new Chart(document.getElementById("pcDonut"),{
 type:"doughnut",
-data:{labels:["PC","Remaining"],
-datasets:[{data:[0,100],backgroundColor:["#34d399","#e5e7eb"]}]},
+data:{labels:["PC","Remaining"],datasets:[{data:[0,100],backgroundColor:["#34d399","#e5e7eb"]}]},
 options:{plugins:{title:{display:true,text:"PC"}}}
 });
-
 let svtDonut = new Chart(document.getElementById("svtDonut"),{
 type:"doughnut",
-data:{labels:["SVT","Remaining"],
-datasets:[{data:[0,100],backgroundColor:["#60a5fa","#e5e7eb"]}]},
+data:{labels:["SVT","Remaining"],datasets:[{data:[0,100],backgroundColor:["#60a5fa","#e5e7eb"]}]},
 options:{plugins:{title:{display:true,text:"SVT"}}}
 });
 
-
 // ==== LINE CHART ====
-
 let labels = [];
-
 for(let i=1;i<=daysInMonth;i++) labels.push(i);
 
 let lineChart = new Chart(document.getElementById("lineChart"),{
-
 type:"line",
-
 data:{
-
-labels:labels,
-
-datasets:[
-
-{label:"Math",data:progress.math,borderColor:"#f87171",fill:false},
-
-{label:"PC",data:progress.pc,borderColor:"#34d399",fill:false},
-
-{label:"SVT",data:progress.svt,borderColor:"#60a5fa",fill:false}
-
-]
-
+    labels:labels,
+    datasets:[
+        {label:"Math",data:progress.math,borderColor:"#f87171",fill:false},
+        {label:"PC",data:progress.pc,borderColor:"#34d399",fill:false},
+        {label:"SVT",data:progress.svt,borderColor:"#60a5fa",fill:false}
+    ]
 },
-
 options:{
-plugins:{title:{display:true,text:"Monthly Progress %"}},
-scales:{y:{min:0,max:100}}
+    plugins:{title:{display:true,text:"Monthly Progress (%)"}},
+    scales:{
+        y:{
+            min:0,
+            max:100,
+            ticks:{stepSize:5}
+        },
+        x:{title:{display:true,text:"Day of Month"}}
+    }
 }
-
 });
 
-
 // ==== UPDATE CHARTS ====
-
 function updateCharts(){
+    let m = sum(progress.math);
+    let p = sum(progress.pc);
+    let s = sum(progress.svt);
 
-let m = sum(progress.math);
-let p = sum(progress.pc);
-let s = sum(progress.svt);
+    mathDonut.data.datasets[0].data=[m,100-m];
+    pcDonut.data.datasets[0].data=[p,100-p];
+    svtDonut.data.datasets[0].data=[s,100-s];
 
-mathDonut.data.datasets[0].data=[m,100-m];
-pcDonut.data.datasets[0].data=[p,100-p];
-svtDonut.data.datasets[0].data=[s,100-s];
+    mathDonut.update();
+    pcDonut.update();
+    svtDonut.update();
 
-mathDonut.update();
-pcDonut.update();
-svtDonut.update();
-
-lineChart.data.datasets[0].data = progress.math;
-lineChart.data.datasets[1].data = progress.pc;
-lineChart.data.datasets[2].data = progress.svt;
-
-lineChart.update();
+    lineChart.data.datasets[0].data = progress.math;
+    lineChart.data.datasets[1].data = progress.pc;
+    lineChart.data.datasets[2].data = progress.svt;
+    lineChart.update();
 }
 
-
-// load saved data on start
+// Load saved data on start
 updateCharts();
 
-
-// ==== DAILY REMINDER ====
-
-if(Notification.permission!="granted")
-Notification.requestPermission();
-
+// ==== DAILY REMINDER 11:00 ====
+if(Notification.permission!="granted") Notification.requestPermission();
 setInterval(()=>{
-
-let d = new Date();
-
-if(d.getHours()==11 && d.getMinutes()==0){
-new Notification("Reminder: Enter today's study points!");
-}
-
+    let d = new Date();
+    if(d.getHours()==11 && d.getMinutes()==0){
+        new Notification("Reminder: Enter today's study points!");
+    }
 },60000);
 
 </script>
-
 </body>
-  </html>
+</html>
