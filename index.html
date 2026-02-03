@@ -109,7 +109,6 @@ const svtPoints  = [20,20,45,15];
 // ==== MONTH INFO ====
 let now = new Date();
 document.getElementById("month").innerText = "Progress - " + now.toLocaleString("default",{month:"long"});
-let daysInMonth = new Date(now.getFullYear(), now.getMonth()+1,0).getDate();
 
 // ==== LOAD SAVED DATA OR CREATE NEW ====
 function loadData(){
@@ -151,7 +150,7 @@ document.getElementById("table").innerHTML =
 
 // ==== BUTTON ACTION ====
 function add(science,index,points,btn){
-    progress[science][index] = points; // 1 point = 1%
+    progress[science][index] = points; // store real points
     saveData();
     btn.classList.add("pressed");
     updateCharts();
@@ -177,7 +176,11 @@ function sum(a){
     return a.reduce((x,y)=>x+y,0);
 }
 
-// ==== DONUT CHARTS ====
+// ==== DONUT CHARTS (1 point = 0.25%) ====
+function calculateDonut(science){
+    return progress[science].map(p=>p*0.25).reduce((a,b)=>a+b,0);
+}
+
 let mathDonut = new Chart(document.getElementById("mathDonut"),{
 type:"doughnut",
 data:{labels:["Math","Remaining"],datasets:[{data:[0,100],backgroundColor:["#f87171","#e5e7eb"]}]},
@@ -194,7 +197,7 @@ data:{labels:["SVT","Remaining"],datasets:[{data:[0,100],backgroundColor:["#60a5
 options:{plugins:{title:{display:true,text:"SVT"}}}
 });
 
-// ==== LINE CHART 17 WEEKS ====
+// ==== LINE CHART 17 WEEKS (1 point = 1%) ====
 let weekLabels = [];
 for(let i=1;i<=17;i++) weekLabels.push("Week "+i);
 
@@ -217,25 +220,24 @@ options:{
 }
 });
 
-// ==== CALCULATE WEEKLY PERCENTAGE ====
-function calculateWeekly(){
+// ==== CALCULATE WEEKLY LINE CHART ====
+function calculateWeeklyLine(){
     let mathWeekly=[],pcWeekly=[],svtWeekly=[];
-    // 16 sessions total → assign 4 sessions per week
     for(let w=0;w<17;w++){
-        // For weeks beyond 4 weeks, repeat last week as 0
-        let start = w*1; // 1 week = 1-4 sessions, we have 16 sessions → 4 weeks
-        mathWeekly[w] = (progress.math[start]||0)+(progress.math[start+1]||0)+(progress.math[start+2]||0)+(progress.math[start+3]||0);
-        pcWeekly[w]   = (progress.pc[start]||0)+(progress.pc[start+1]||0)+(progress.pc[start+2]||0)+(progress.pc[start+3]||0);
-        svtWeekly[w]  = (progress.svt[start]||0)+(progress.svt[start+1]||0)+(progress.svt[start+2]||0)+(progress.svt[start+3]||0);
+        let start = w*1; // 1 week = 4 sessions, we have 16 → after week 4 points=0
+        mathWeekly[w] = ((progress.math[start]||0)+(progress.math[start+1]||0)+(progress.math[start+2]||0)+(progress.math[start+3]||0));
+        pcWeekly[w]   = ((progress.pc[start]||0)+(progress.pc[start+1]||0)+(progress.pc[start+2]||0)+(progress.pc[start+3]||0));
+        svtWeekly[w]  = ((progress.svt[start]||0)+(progress.svt[start+1]||0)+(progress.svt[start+2]||0)+(progress.svt[start+3]||0));
     }
     return [mathWeekly,pcWeekly,svtWeekly];
 }
 
 // ==== UPDATE CHARTS ====
 function updateCharts(){
-    let m = sum(progress.math);
-    let p = sum(progress.pc);
-    let s = sum(progress.svt);
+    // Donut calculation (1 point = 0.25%)
+    let m = calculateDonut("math");
+    let p = calculateDonut("pc");
+    let s = calculateDonut("svt");
 
     mathDonut.data.datasets[0].data=[m,100-m];
     pcDonut.data.datasets[0].data=[p,100-p];
@@ -245,7 +247,8 @@ function updateCharts(){
     pcDonut.update();
     svtDonut.update();
 
-    let weekly = calculateWeekly();
+    // Line chart calculation (1 point = 1%)
+    let weekly = calculateWeeklyLine();
     lineChart.data.datasets[0].data = weekly[0];
     lineChart.data.datasets[1].data = weekly[1];
     lineChart.data.datasets[2].data = weekly[2];
